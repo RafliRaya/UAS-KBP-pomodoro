@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Learning Support Website</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.16/dist/tailwind.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.1/dist/chart.min.js"></script>
+  <audio id="timer-alarm" src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3"></audio>
+</head>
+<body class="bg-gray-100 font-sans">
+  <div class="container mx-auto px-4 py-8">
+    <h1 class="text-3xl font-bold mb-8 text-center">Learning Support Website</h1>
+    
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <!-- Pomodoro Timer -->
+      <div class="bg-white shadow-lg rounded-lg p-6">
+        <h2 class="text-2xl font-bold mb-4">Pomodoro Timer</h2>
+        <div class="flex justify-center items-center mb-4">
+          <div class="text-6xl font-bold mr-4" id="pomodoro-timer">25:00</div>
+          <div class="flex flex-col space-y-2">
+            <button class="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded" id="start-pomodoro">Start</button>
+            <button class="bg-gray-400 hover:bg-gray-500 text-white px-6 py-2 rounded" id="reset-pomodoro">Reset</button>
+          </div>
+        </div>
+        <div class="flex justify-center space-x-4 mb-4">
+          <button class="bg-indigo-500 hover:bg-indigo-600 text-white px-4 py-2 rounded" id="pomodoro-btn">Pomodoro</button>
+          <button class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded" id="short-break-btn">Short Break</button>
+          <button class="bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded" id="long-break-btn">Long Break</button>
+        </div>
+        <div class="text-center text-lg font-medium" id="pomodoro-status">Ready to start!</div>
+      </div>
+
+      <!-- To-Do List -->
+      <div class="bg-white shadow-lg rounded-lg p-6">
+        <h2 class="text-2xl font-bold mb-4">To-Do List</h2>
+        <div class="mb-4">
+          <form id="todo-form" class="space-y-2">
+            <input type="text" class="border rounded px-4 py-2 w-full" placeholder="Add a new task" id="todo-input">
+            <button type="submit" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded w-full" id="add-todo">Add Task</button>
+          </form>
+        </div>
+        <ul class="space-y-2 max-h-64 overflow-y-auto" id="todo-list"></ul>
+      </div>
+
+      <!-- Productivity Stats -->
+      <div class="bg-white shadow-lg rounded-lg p-6">
+        <h2 class="text-2xl font-bold mb-4">Productivity Stats</h2>
+        <div class="h-64">
+          <canvas id="productivity-chart"></canvas>
+        </div>
+      </div>
+
+      <!-- Spotify Section -->
+      <div class="bg-white shadow-lg rounded-lg p-6">
+        <h2 class="text-2xl font-bold mb-4">Study Music</h2>
+        <div class="aspect-w-16 aspect-h-9">
+          <iframe src="https://open.spotify.com/embed/playlist/4rS7njPdogtz07VjyU7rVt?si=b63c8d6e784644b5" 
+                  class="w-full h-64" 
+                  frameborder="0" 
+                  allow="encrypted-media"
+                  loading="lazy"></iframe>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Pomodoro Timer
+    const pomodoroTimer = document.getElementById('pomodoro-timer');
+    const startPomodoroBtn = document.getElementById('start-pomodoro');
+    const resetPomodoroBtn = document.getElementById('reset-pomodoro');
+    const pomodoroStatus = document.getElementById('pomodoro-status');
+    const pomodoroBtnEl = document.getElementById('pomodoro-btn');
+    const shortBreakBtnEl = document.getElementById('short-break-btn');
+    const longBreakBtnEl = document.getElementById('long-break-btn');
+    const timerAlarm = document.getElementById('timer-alarm');
+
+    const POMODORO_TIME = 25 * 60;
+    const SHORT_BREAK_TIME = 5 * 60;
+    const LONG_BREAK_TIME = 10 * 60;
+
+    let currentTime = POMODORO_TIME;
+    let originalTime = POMODORO_TIME;
+    let interval;
+    let isRunning = false;
+
+    function updateTimerDisplay() {
+      const minutes = Math.floor(currentTime / 60);
+      const seconds = currentTime % 60;
+      pomodoroTimer.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+    }
+
+    function startTimer() {
+      if (!isRunning) {
+        isRunning = true;
+        startPomodoroBtn.textContent = 'Pause';
+        interval = setInterval(() => {
+          if (currentTime > 0) {
+            currentTime--;
+            updateTimerDisplay();
+          }
+          if (currentTime === 0) {
+            clearInterval(interval);
+            isRunning = false;
+            startPomodoroBtn.textContent = 'Start';
+            pomodoroStatus.textContent = 'Time is up!';
+            playAlarm();
+          }
+        }, 1000);
+      } else {
+        clearInterval(interval);
+        isRunning = false;
+        startPomodoroBtn.textContent = 'Start';
+      }
+    }
+
+    function resetTimer() {
+      clearInterval(interval);
+      isRunning = false;
+      currentTime = originalTime;
+      startPomodoroBtn.textContent = 'Start';
+      updateTimerDisplay();
+      pomodoroStatus.textContent = 'Timer reset!';
+    }
+
+    function setTimer(time, status) {
+      clearInterval(interval);
+      isRunning = false;
+      currentTime = time;
+      originalTime = time;
+      startPomodoroBtn.textContent = 'Start';
+      updateTimerDisplay();
+      pomodoroStatus.textContent = status;
+    }
+
+    function playAlarm() {
+      timerAlarm.play().catch(error => {
+        console.log('Audio playback failed:', error);
+      });
+    }
+
+    pomodoroBtnEl.addEventListener('click', () => setTimer(POMODORO_TIME, 'Pomodoro session ready!'));
+    shortBreakBtnEl.addEventListener('click', () => setTimer(SHORT_BREAK_TIME, 'Short break ready!'));
+    longBreakBtnEl.addEventListener('click', () => setTimer(LONG_BREAK_TIME, 'Long break ready!'));
+    startPomodoroBtn.addEventListener('click', startTimer);
+    resetPomodoroBtn.addEventListener('click', resetTimer);
+
+    // To-Do List
+    const todoForm = document.getElementById('todo-form');
+    const todoInput = document.getElementById('todo-input');
+    const todoList = document.getElementById('todo-list');
+
+    let todos = JSON.parse(localStorage.getItem('todos')) || [];
+
+    function renderTodos() {
+      todoList.innerHTML = '';
+      todos.forEach((todo, index) => {
+        const todoItem = document.createElement('li');
+        todoItem.classList.add('flex', 'justify-between', 'items-center', 'bg-gray-50', 'p-3', 'rounded', 'transition-all', 'duration-200');
+        
+        const leftSection = document.createElement('div');
+        leftSection.classList.add('flex', 'items-center', 'flex-1');
+        
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.checked = todo.completed;
+        checkbox.classList.add('h-5', 'w-5', 'cursor-pointer');
+        checkbox.addEventListener('change', () => toggleTodo(index));
+
+        const label = document.createElement('label');
+        label.textContent = todo.text;
+        label.classList.add('ml-3', 'flex-1', 'cursor-pointer');
+        if (todo.completed) {
+          label.classList.add('line-through', 'text-gray-500');
+        }
+
+        const deleteBtn = document.createElement('button');
+        deleteBtn.innerHTML = '&times;';
+        deleteBtn.classList.add('bg-red-500', 'hover:bg-red-600', 'text-white', 'px-3', 'py-1', 'rounded', 'ml-2');
+        deleteBtn.addEventListener('click', () => deleteTodo(index));
+
+        leftSection.appendChild(checkbox);
+        leftSection.appendChild(label);
+        todoItem.appendChild(leftSection);
+        todoItem.appendChild(deleteBtn);
+        todoList.appendChild(todoItem);
+      });
+
+      if (todos.length === 0) {
+        const emptyMessage = document.createElement('li');
+        emptyMessage.textContent = 'No tasks yet. Add some!';
+        emptyMessage.classList.add('text-center', 'text-gray-500', 'py-4');
+        todoList.appendChild(emptyMessage);
+      }
+    }
+
+    function addTodo(e) {
+      e.preventDefault();
+      const todoText = todoInput.value.trim();
+      if (todoText) {
+        todos.push({ text: todoText, completed: false });
+        saveTodos();
+        todoInput.value = '';
+        renderTodos();
+      }
+    }
+
+    function toggleTodo(index) {
+      todos[index].completed = !todos[index].completed;
+      saveTodos();
+      renderTodos();
+    }
+
+    function deleteTodo(index) {
+      todos.splice(index, 1);
+      saveTodos();
+      renderTodos();
+    }
+
+    function saveTodos() {
+      localStorage.setItem('todos', JSON.stringify(todos));
+    }
+
+    todoForm.addEventListener('submit', addTodo);
+    renderTodos();
+
+    // Productivity Stats
+    const productivityChart = document.getElementById('productivity-chart').getContext('2d');
+
+    new Chart(productivityChart, {
+      type: 'line',
+      data: {
+        labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'],
+        datasets: [{
+          label: 'Pomodoro Sessions',
+          data: [10, 15, 12, 18, 20],
+          backgroundColor: 'rgba(59, 130, 246, 0.2)',
+          borderColor: 'rgb(59, 130, 246)',
+          borderWidth: 2,
+          tension: 0.4
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            position: 'bottom'
+          }
+        },
+        scales: {
+          y: {
+            beginAtZero: true,
+            ticks: {
+              stepSize: 5
+            }
+          }
+        }
+      }
+    });
+  </script>
+</body>
+</html>
